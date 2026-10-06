@@ -73,10 +73,10 @@ select.pair{appearance:none;font-family:var(--mono);font-weight:700;font-size:15
 /* presets */
 .limit{display:flex;align-items:center;gap:10px}
 .limit label{font-family:var(--cond);font-size:13px;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
-select.lim{flex:1;min-width:0;appearance:none;font-family:var(--mono);font-weight:700;font-size:20px;color:var(--fg);background-color:var(--panel2);
-  border:1px solid var(--hold);border-radius:8px;padding:12px 40px 12px 14px;cursor:pointer;font-variant-numeric:tabular-nums;
+select.lim{flex:0 0 auto;appearance:none;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--fg);background-color:var(--panel2);
+  border:1px solid var(--hold);border-radius:6px;padding:6px 28px 6px 10px;cursor:pointer;font-variant-numeric:tabular-nums;
   background-image:linear-gradient(45deg,transparent 50%,var(--hold) 50%),linear-gradient(135deg,var(--hold) 50%,transparent 50%);
-  background-position:calc(100% - 22px) 50%,calc(100% - 15px) 50%;background-size:7px 7px;background-repeat:no-repeat;box-shadow:0 0 14px -6px var(--hold)}
+  background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
 select.lim:disabled{opacity:.4;cursor:not-allowed}
 .opts{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .opts label{display:flex;align-items:center;gap:5px;cursor:pointer}
@@ -148,7 +148,7 @@ td.r,th.r{text-align:right}
 
   <div class="limit">
     <label for="lim">制限時間</label>
-    <select class="lim" id="lim"><option value="10">10秒で決済</option><option value="15">15秒で決済</option><option value="20">20秒で決済</option><option value="25">25秒で決済</option><option value="30">30秒で決済</option><option value="35">35秒で決済</option><option value="40">40秒で決済</option><option value="45">45秒で決済</option><option value="50">50秒で決済</option><option value="55">55秒で決済</option><option value="60" selected>60秒で決済</option><option value="65">65秒で決済</option><option value="70">70秒で決済</option><option value="75">75秒で決済</option><option value="80">80秒で決済</option><option value="85">85秒で決済</option><option value="90">90秒で決済</option><option value="95">95秒で決済</option><option value="100">100秒で決済</option><option value="105">105秒で決済</option><option value="110">110秒で決済</option><option value="115">115秒で決済</option><option value="120">120秒で決済</option></select>
+    <select class="lim" id="lim"><option value="10">10秒</option><option value="15">15秒</option><option value="20">20秒</option><option value="25">25秒</option><option value="30">30秒</option><option value="35">35秒</option><option value="40">40秒</option><option value="45">45秒</option><option value="50">50秒</option><option value="55">55秒</option><option value="60" selected>60秒</option><option value="65">65秒</option><option value="70">70秒</option><option value="75">75秒</option><option value="80">80秒</option><option value="85">85秒</option><option value="90">90秒</option><option value="95">95秒</option><option value="100">100秒</option><option value="105">105秒</option><option value="110">110秒</option><option value="115">115秒</option><option value="120">120秒</option></select>
   </div>
   <div class="opts">
     <label><input type="checkbox" id="snd" checked> 音</label>
