@@ -71,11 +71,14 @@ select.pair{appearance:none;font-family:var(--mono);font-weight:700;font-size:15
 .pos .s{font-weight:700}
 
 /* presets */
-.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
-.seg button{flex:1;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 0;border:0;border-left:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
-.seg button:first-child{border-left:0}
-.seg button[aria-pressed="true"]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--hold)}
-.seg button:disabled{cursor:not-allowed;opacity:.5}
+.limit{display:flex;flex-direction:column;gap:6px}
+.limit .lbl{display:flex;justify-content:space-between;font-family:var(--cond);font-size:12px;letter-spacing:.14em;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.seg button{min-height:50px;font-family:var(--mono);font-size:18px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums;transition:background .12s,color .12s,border-color .12s}
+.seg button small{font-size:11px;font-weight:500;margin-left:1px}
+.seg button[aria-pressed="true"]{background:rgba(25,227,163,.14);border-color:var(--hold);color:var(--fg);box-shadow:0 0 14px -4px var(--hold)}
+.seg button:active{transform:scale(.96)}
+.seg button:disabled{cursor:not-allowed;opacity:.4}
 .opts{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .opts label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .opts input{accent-color:var(--hold)}
@@ -143,11 +146,15 @@ td.r,th.r{text-align:right}
     </div>
   </div>
 
-  <div class="seg" id="presets" role="group" aria-label="制限時間">
-    <button type="button" data-s="30" aria-pressed="false">30s</button>
-    <button type="button" data-s="45" aria-pressed="false">45s</button>
-    <button type="button" data-s="60" aria-pressed="true">60s</button>
-    <button type="button" data-s="90" aria-pressed="false">90s</button>
+  <div class="limit">
+    <div class="lbl"><span>制限時間</span><span id="limLbl">60秒で決済</span></div>
+    <div class="seg" id="presets" role="group" aria-label="制限時間">
+      <button type="button" data-s="20" aria-pressed="false">20<small>s</small></button>
+      <button type="button" data-s="30" aria-pressed="false">30<small>s</small></button>
+      <button type="button" data-s="45" aria-pressed="false">45<small>s</small></button>
+      <button type="button" data-s="60" aria-pressed="true">60<small>s</small></button>
+      <button type="button" data-s="90" aria-pressed="false">90<small>s</small></button>
+    </div>
   </div>
   <div class="opts">
     <label><input type="checkbox" id="snd" checked> 音</label>
@@ -245,8 +252,11 @@ function exit(){
   idle();
 }
 $('orders').onclick=e=>{const b=e.target.closest('button');if(!b)return;running?exit():enter(b.dataset.side)};
-$('presets').onclick=e=>{const b=e.target.closest('button');if(!b||running)return;limit=+b.dataset.s;
-  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',x===b));idle()};
+function setLimit(v){limit=v;
+  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.s===v));
+  $('limLbl').textContent=v+'秒で決済';try{localStorage.setItem('scalp-limit',v)}catch(e){}idle()}
+$('presets').onclick=e=>{const b=e.target.closest('button');if(!b||running)return;setLimit(+b.dataset.s);buzz(20)};
+try{const v=+localStorage.getItem('scalp-limit');if([20,30,45,60,90].includes(v))limit=v}catch(e){}
 let armed=false;
 $('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='もう一度押すとリセット';setTimeout(()=>{armed=false;$('reset').textContent='本日の記録をリセット'},3000);return}
   trades=[];save();render();armed=false;$('reset').textContent='本日の記録をリセット'};
@@ -276,7 +286,7 @@ $('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='もう一�
   if(reduce)draw();else loop();
 })();
 
-render();idle();
+render();setLimit(limit);
 </script>
 </body>
 </html>
