@@ -6,149 +6,276 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#06090e">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <style>html{box-sizing:border-box}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*{-webkit-tap-highlight-color:transparent}</style>
 <title>1分決済タイマー</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Barlow+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
 <style>
-/* layout: one-screen phone tool — ring timer center, big entry/exit button at thumb height */
+/* layout: trading-terminal one-screen — top bar + session stats, tick-marked gauge, 買い/売り order buttons, trade history blotter */
 :root{
-  --bg:#0d1117; --panel:#161c25; --line:#273142; --fg:#e8edf4; --muted:#8592a6;
-  --idle:#5b8cff; --run:#2fd08a; --warn:#ffc53d; --over:#ff4d5e;
-  --display:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  --bg:#06090e; --panel:#0c121b; --panel2:#111a26; --line:#1c2735; --grid:rgba(120,160,210,.06);
+  --fg:#e6edf6; --muted:#6f7f95; --dim:#3a4757;
+  --hold:#19e3a3; --warn:#ffb020; --over:#ff3b55;
+  --buy:#ff4a5f; --sell:#3d8bff;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --cond:"Barlow Condensed","Arial Narrow",sans-serif;
+  --jp:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
   color-scheme:dark;
 }
 html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--display);margin:0;transition:background .25s}
-body.alarm{animation:flash .5s steps(1) infinite}
-@keyframes flash{0%{background:var(--over)}50%{background:var(--bg)}}
-@media (prefers-reduced-motion:reduce){body.alarm{animation:none;background:#3a0d14}}
-.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;padding-inline:16px;padding-block:16px;max-width:460px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:baseline}
-h1{font-size:15px;font-weight:900;letter-spacing:.06em;margin:0}
-.status{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
-.ringwrap{flex:1;display:grid;place-items:center;min-height:0}
-.ring{position:relative;width:min(78vw,300px);aspect-ratio:1;max-width:100%}
-.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
-.ring circle{fill:none;stroke-width:10}
-.track{stroke:var(--line)}
-.prog{stroke:var(--idle);stroke-linecap:round;transition:stroke .2s}
-.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:4px}
-.time{font-family:var(--mono);font-weight:700;font-size:64px;font-variant-numeric:tabular-nums;line-height:1}
-.sub{font-size:13px;color:var(--muted)}
-.presets{display:flex;gap:8px}
-.presets button{flex:1;font-family:var(--mono);font-size:15px;padding:10px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
-.presets button[aria-pressed="true"]{color:var(--fg);border-color:var(--idle)}
-.opts{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
-.opts label{display:flex;align-items:center;gap:6px}
-.main{font-family:var(--display);font-weight:900;font-size:26px;letter-spacing:.1em;border:0;border-radius:18px;padding:22px 0;cursor:pointer;color:#06210f;background:var(--run)}
-.main.exit{background:var(--fg);color:var(--bg)}
-button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
-.log{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;min-height:16px}
-.log b{color:var(--fg);font-weight:500}
-.log .late{color:var(--over)}
+body{background:var(--bg);color:var(--fg);font-family:var(--jp);margin:0;overflow:hidden}
+#bgc{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.flash{position:fixed;inset:0;z-index:1;pointer-events:none;background:var(--over);opacity:0}
+body.alarm .flash{animation:fl .5s steps(1) infinite}
+@keyframes fl{0%{opacity:.55}50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){body.alarm .flash{animation:none;opacity:.25}}
+
+.app{position:relative;z-index:2;height:100%;box-sizing:border-box;max-width:480px;margin:0 auto;
+  display:flex;flex-direction:column;gap:12px;padding-inline:16px;padding-block:12px}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo{display:flex;align-items:center;gap:8px;font-family:var(--cond);font-weight:700;font-size:20px;letter-spacing:.14em}
+.logo i{width:8px;height:8px;border-radius:50%;background:var(--hold);box-shadow:0 0 10px var(--hold)}
+.logo small{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;font-weight:500}
+.clock{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.clock b{color:var(--fg);font-weight:500}
+
+.row{display:flex;gap:8px;align-items:stretch}
+select.pair{appearance:none;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--fg);background:var(--panel2);
+  border:1px solid var(--line);border-radius:6px;padding:8px 28px 8px 10px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.stats{flex:1;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.stat{padding:5px 8px;border-left:1px solid var(--line);min-width:0}
+.stat:first-child{border-left:0}
+.stat span{display:block;font-family:var(--cond);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.stat b{font-family:var(--mono);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat b.bad{color:var(--over)}
+
+/* gauge */
+.gauge{flex:1;min-height:0;display:grid;place-items:center}
+.ring{position:relative;width:min(74vw,42vh,300px);aspect-ratio:1;max-width:100%}
+.ring svg{width:100%;height:100%;display:block}
+.ticks line{stroke:var(--dim);stroke-width:1}
+.ticks line.maj{stroke:var(--muted);stroke-width:2}
+.track{fill:none;stroke:var(--line);stroke-width:7}
+.prog{fill:none;stroke:var(--sell);stroke-width:7;stroke-linecap:butt;transition:stroke .2s;filter:drop-shadow(0 0 6px currentColor)}
+.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:6px}
+.state{font-family:var(--cond);font-weight:700;font-size:13px;letter-spacing:.3em;color:var(--muted)}
+.time{font-family:var(--mono);font-weight:800;font-size:clamp(46px,15vw,68px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pos{font-family:var(--mono);font-size:12px;color:var(--muted);min-height:16px}
+.pos .s{font-weight:700}
+
+/* presets */
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{flex:1;font-family:var(--mono);font-size:13px;font-weight:500;padding:9px 0;border:0;border-left:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--hold)}
+.seg button:disabled{cursor:not-allowed;opacity:.5}
+.opts{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.opts label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.opts input{accent-color:var(--hold)}
+
+/* order buttons */
+.orders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ob{border:0;border-radius:8px;padding:14px 0 12px;cursor:pointer;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-family:var(--jp);font-weight:900;font-size:24px;letter-spacing:.12em;transition:transform .08s,filter .15s}
+.ob small{font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.25em;opacity:.85}
+.ob:active{transform:scale(.97)}
+.ob.buy{background:linear-gradient(180deg,#ff5d70,#d92c45);box-shadow:0 6px 24px -8px var(--buy)}
+.ob.sell{background:linear-gradient(180deg,#5a9cff,#2266d6);box-shadow:0 6px 24px -8px var(--sell)}
+.ob.close{grid-column:1/-1;background:var(--fg);color:var(--bg);box-shadow:0 6px 24px -10px var(--fg)}
+button:focus-visible,select:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+
+/* blotter */
+.blotter{border:1px solid var(--line);border-radius:6px;background:var(--panel);max-height:112px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--panel);font-family:var(--cond);font-weight:600;letter-spacing:.12em;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+td{padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.tag{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px}
+.tag.ok{color:var(--hold);background:rgba(25,227,163,.12)}
+.tag.ng{color:var(--over);background:rgba(255,59,85,.14)}
+.empty{padding:10px;text-align:center;color:var(--muted);font-size:12px}
+.foot{display:flex;justify-content:flex-end}
+.foot button{font-family:var(--cond);font-size:12px;letter-spacing:.12em;color:var(--muted);background:none;border:0;cursor:pointer;padding:0}
 </style>
 </head>
 <body>
 
-<div class="app">
-  <header><h1>1分決済タイマー</h1><span class="status" id="status">待機中</span></header>
+<canvas id="bgc" aria-hidden="true"></canvas>
+<div class="flash" aria-hidden="true"></div>
 
-  <div class="ringwrap">
-    <div class="ring">
-      <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="prog" id="prog" cx="60" cy="60" r="52"/></svg>
-      <div class="center"><div class="time" id="time">1:00</div><div class="sub" id="sub">ボタンでエントリー</div></div>
+<div class="app">
+  <div class="bar">
+    <div class="logo"><i></i>SCALP TIMER <small>1M</small></div>
+    <div class="clock">JST <b id="clock">--:--:--</b></div>
+  </div>
+
+  <div class="row">
+    <select class="pair" id="pair" aria-label="通貨ペア">
+      <option>USD/JPY</option><option>EUR/JPY</option><option>GBP/JPY</option><option>AUD/JPY</option><option>EUR/USD</option><option>GBP/USD</option><option>XAU/USD</option>
+    </select>
+    <div class="stats">
+      <div class="stat"><span>本日 取引</span><b id="stN">0</b></div>
+      <div class="stat"><span>平均保有</span><b id="stA">--</b></div>
+      <div class="stat"><span>時間超過</span><b id="stO">0</b></div>
     </div>
   </div>
 
-  <div class="presets" id="presets">
-    <button type="button" data-s="30" aria-pressed="false">30秒</button>
-    <button type="button" data-s="45" aria-pressed="false">45秒</button>
-    <button type="button" data-s="60" aria-pressed="true">60秒</button>
-    <button type="button" data-s="90" aria-pressed="false">90秒</button>
+  <div class="gauge">
+    <div class="ring">
+      <svg viewBox="0 0 200 200">
+        <g class="ticks" id="ticks"></g>
+        <circle class="track" cx="100" cy="100" r="78"/>
+        <circle class="prog" id="prog" cx="100" cy="100" r="78" transform="rotate(-90 100 100)"/>
+      </svg>
+      <div class="center">
+        <div class="state" id="state">STANDBY</div>
+        <div class="time" id="time">1:00</div>
+        <div class="pos" id="pos">ポジションなし</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seg" id="presets" role="group" aria-label="制限時間">
+    <button type="button" data-s="30" aria-pressed="false">30s</button>
+    <button type="button" data-s="45" aria-pressed="false">45s</button>
+    <button type="button" data-s="60" aria-pressed="true">60s</button>
+    <button type="button" data-s="90" aria-pressed="false">90s</button>
   </div>
   <div class="opts">
     <label><input type="checkbox" id="snd" checked> 音</label>
     <label><input type="checkbox" id="vib" checked> 振動</label>
-    <label><input type="checkbox" id="pre" checked> 残り10秒で黄色</label>
+    <label><input type="checkbox" id="pre" checked> 残り10秒で警告</label>
   </div>
 
-  <button type="button" class="main" id="main">エントリー</button>
-  <div class="log" id="log"><span>保有時間の記録がここに並びます</span></div>
+  <div class="orders" id="orders">
+    <button type="button" class="ob sell" data-side="SELL"><small>SELL</small>売り</button>
+    <button type="button" class="ob buy" data-side="BUY"><small>BUY</small>買い</button>
+  </div>
+
+  <div class="blotter">
+    <table><thead><tr><th>時刻</th><th>売買</th><th>ペア</th><th class="r">保有</th><th class="r">判定</th></tr></thead>
+    <tbody id="hist"></tbody></table>
+  </div>
+  <div class="foot"><button type="button" id="reset">本日の記録をリセット</button></div>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
-const C=2*Math.PI*52, prog=$('prog');
+const R=78, C=2*Math.PI*R, prog=$('prog');
 prog.style.strokeDasharray=C;
-let limit=60, start=0, raf=0, running=false, alarmed=false, warned=false, ac=null, beepT=0, wake=null;
-const log=[];
-const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v);
-const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-function setColor(v){prog.style.stroke=css(v)}
+/* gauge ticks: 60 marks, longer every 5 */
+(()=>{let h='';for(let i=0;i<60;i++){const a=i/60*2*Math.PI-Math.PI/2,maj=i%5===0,r1=92,r2=maj?84:88;
+h+=`<line class="${maj?'maj':''}" x1="${100+r1*Math.cos(a)}" y1="${100+r1*Math.sin(a)}" x2="${100+r2*Math.cos(a)}" y2="${100+r2*Math.sin(a)}"/>`}$('ticks').innerHTML=h})();
+
+/* clock */
+const pad=n=>String(n).padStart(2,'0');
+function clock(){const d=new Date(Date.now()+9*3600e3);$('clock').textContent=pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds())}
+setInterval(clock,1000);clock();
+
+/* today's trades (kept in this browser only) */
+const today=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+let trades=[];
+try{const s=JSON.parse(localStorage.getItem('scalp-trades')||'null');if(s&&s.day===today())trades=s.list}catch(e){}
+function save(){try{localStorage.setItem('scalp-trades',JSON.stringify({day:today(),list:trades}))}catch(e){}}
+
+let limit=60,start=0,raf=0,running=false,side='',alarmed=false,warned=false,ac=null,beepT=0,wake=null;
+const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+pad(s%60)};
+
+function render(){
+  const n=trades.length,o=trades.filter(t=>t.late).length;
+  $('stN').textContent=n;
+  $('stA').textContent=n?(trades.reduce((a,t)=>a+t.held,0)/n).toFixed(1)+'s':'--';
+  $('stO').textContent=o;$('stO').classList.toggle('bad',o>0);
+  $('hist').innerHTML=n?trades.slice().reverse().map(t=>`<tr><td>${t.at}</td><td style="color:var(--${t.side==='BUY'?'buy':'sell'})">${t.side==='BUY'?'買':'売'}</td><td>${t.pair}</td><td class="r">${t.held.toFixed(1)}s</td><td class="r"><span class="tag ${t.late?'ng':'ok'}">${t.late?'OVER':'OK'}</span></td></tr>`).join('')
+    :`<tr><td colspan="5" class="empty">まだ取引はありません</td></tr>`;
+}
 function idle(){
-  $('time').textContent=fmt(limit);prog.style.strokeDashoffset=0;setColor('--idle');
-  $('sub').textContent='ボタンでエントリー';$('status').textContent='待機中';
+  $('time').textContent=fmt(limit);prog.style.strokeDashoffset=0;prog.style.stroke=css('--line');
+  $('state').textContent='STANDBY';$('state').style.color='';$('pos').textContent='ポジションなし';
 }
 function beep(f=880,d=.15){
   if(!$('snd').checked||!ac)return;
-  const o=ac.createOscillator(),g=ac.createGain();
-  o.frequency.value=f;o.type='square';g.gain.value=.15;
+  const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.type='square';g.gain.value=.12;
   o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);
 }
 function buzz(p){if($('vib').checked&&navigator.vibrate){try{navigator.vibrate(p)}catch(e){}}}
+function setState(txt,v){$('state').textContent=txt;$('state').style.color=css(v);prog.style.stroke=css(v);prog.style.color=css(v)}
 
 function tick(){
-  const el=(performance.now()-start)/1000, left=limit-el;
+  const el=(performance.now()-start)/1000,left=limit-el;
   if(left>0){
-    $('time').textContent=fmt(left);
-    prog.style.strokeDashoffset=C*(el/limit);
-    if($('pre').checked&&left<=10&&!warned){warned=true;setColor('--warn');$('status').textContent='まもなく';beep(660,.1);buzz(150)}
+    $('time').textContent=fmt(left);prog.style.strokeDashoffset=C*(el/limit);
+    if($('pre').checked&&left<=10&&!warned){warned=true;setState('CLOSE SOON','--warn');beep(660,.1);buzz(150)}
   }else{
-    $('time').textContent='+'+fmt(-left);
-    prog.style.strokeDashoffset=C;
-    if(!alarmed){
-      alarmed=true;setColor('--over');document.body.classList.add('alarm');
-      $('status').textContent='時間です';$('sub').textContent='決済しましょう';
-      buzz([400,150,400,150,400]);beep();
-      beepT=setInterval(()=>{beep();buzz([300,150,300])},1500);
-    }
+    $('time').textContent='+'+fmt(-left);prog.style.strokeDashoffset=C;
+    if(!alarmed){alarmed=true;setState('TIME UP','--over');document.body.classList.add('alarm');
+      buzz([400,150,400,150,400]);beep();beepT=setInterval(()=>{beep();buzz([300,150,300])},1500)}
   }
   raf=requestAnimationFrame(tick);
 }
-
-async function enter(){
+async function enter(s){
   if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(ac&&ac.state==='suspended')ac.resume();
   try{wake=await navigator.wakeLock?.request('screen')}catch(e){}
-  running=true;alarmed=false;warned=false;start=performance.now();
-  setColor('--run');$('sub').textContent='保有中';$('status').textContent='保有中';
-  $('main').textContent='決済した';$('main').classList.add('exit');
-  beep(1200,.06);buzz(60);
-  tick();
+  side=s;running=true;alarmed=warned=false;start=performance.now();
+  setState('HOLDING','--hold');
+  $('pos').innerHTML=`<span class="s" style="color:var(--${s==='BUY'?'buy':'sell'})">${s==='BUY'?'買い':'売り'}</span> ${$('pair').value}`;
+  $('orders').innerHTML='<button type="button" class="ob close" id="close"><small>CLOSE POSITION</small>決済した</button>';
+  document.querySelectorAll('#presets button').forEach(b=>b.disabled=true);$('pair').disabled=true;
+  beep(1200,.06);buzz(60);tick();
 }
 function exit(){
-  const held=(performance.now()-start)/1000;
-  cancelAnimationFrame(raf);clearInterval(beepT);running=false;
-  document.body.classList.remove('alarm');
+  const held=(performance.now()-start)/1000,d=new Date(Date.now()+9*3600e3);
+  cancelAnimationFrame(raf);clearInterval(beepT);running=false;document.body.classList.remove('alarm');
   try{wake?.release()}catch(e){};wake=null;
-  log.unshift({held,late:held>limit});if(log.length>8)log.pop();
-  $('log').innerHTML=log.map(x=>`<span class="${x.late?'late':''}"><b>${x.held.toFixed(1)}</b>秒</span>`).join('');
-  $('main').textContent='エントリー';$('main').classList.remove('exit');
+  trades.push({at:pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds()),side,pair:$('pair').value,held,late:held>limit});
+  save();render();
+  $('orders').innerHTML='<button type="button" class="ob sell" data-side="SELL"><small>SELL</small>売り</button><button type="button" class="ob buy" data-side="BUY"><small>BUY</small>買い</button>';
+  document.querySelectorAll('#presets button').forEach(b=>b.disabled=false);$('pair').disabled=false;
   idle();
 }
-$('main').onclick=()=>running?exit():enter();
-$('presets').onclick=e=>{
-  const b=e.target.closest('button');if(!b||running)return;
-  limit=+b.dataset.s;
-  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',x===b));
-  idle();
-};
-idle();
+$('orders').onclick=e=>{const b=e.target.closest('button');if(!b)return;running?exit():enter(b.dataset.side)};
+$('presets').onclick=e=>{const b=e.target.closest('button');if(!b||running)return;limit=+b.dataset.s;
+  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',x===b));idle()};
+let armed=false;
+$('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='もう一度押すとリセット';setTimeout(()=>{armed=false;$('reset').textContent='本日の記録をリセット'},3000);return}
+  trades=[];save();render();armed=false;$('reset').textContent='本日の記録をリセット'};
+
+/* background: faint drifting candlestick chart (decoration only, not market data) */
+(()=>{
+  const cv=$('bgc'),x=cv.getContext('2d'),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W,H,dpr,candles=[],off=0,price=150;const CW=14;
+  function mk(){const o=price,c=o+(Math.random()-.5)*1.6,h=Math.max(o,c)+Math.random()*.7,l=Math.min(o,c)-Math.random()*.7;price=c+(150-c)*.02;return{o,c,h,l}}
+  function size(){dpr=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
+    while(candles.length<Math.ceil(W/CW)+3)candles.push(mk())}
+  function draw(){
+    x.clearRect(0,0,W,H);
+    x.strokeStyle=css('--grid');x.lineWidth=1;
+    for(let gx=0;gx<W;gx+=56){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
+    for(let gy=0;gy<H;gy+=56){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+    let mn=Infinity,mx=-Infinity;candles.forEach(k=>{mn=Math.min(mn,k.l);mx=Math.max(mx,k.h)});
+    const top=H*.18,bot=H*.62,y=v=>bot-(v-mn)/(mx-mn||1)*(bot-top);
+    x.globalAlpha=.16;
+    candles.forEach((k,i)=>{const cx=i*CW-off+CW/2,up=k.c>=k.o;x.strokeStyle=x.fillStyle=up?css('--buy'):css('--sell');
+      x.beginPath();x.moveTo(cx,y(k.h));x.lineTo(cx,y(k.l));x.stroke();
+      const a=y(Math.max(k.o,k.c)),b=y(Math.min(k.o,k.c));x.fillRect(cx-4,a,8,Math.max(1,b-a))});
+    x.globalAlpha=1;
+  }
+  function loop(){off+=.15;if(off>=CW){off-=CW;candles.shift();candles.push(mk())}draw();requestAnimationFrame(loop)}
+  addEventListener('resize',()=>{size();draw()});size();
+  if(reduce)draw();else loop();
+})();
+
+render();idle();
 </script>
 </body>
 </html>
