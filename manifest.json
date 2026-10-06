@@ -1,1 +1,1 @@
-{"name":"1分決済タイマー","short_name":"決済タイマー","start_url":"./","display":"standalone","background_color":"#06090e","theme_color":"#06090e","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]}
+{"name":"1分決済タイマー","short_name":"決済タイマー","start_url":"./","display":"standalone","background_color":"#06090e","theme_color":"#06090e","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
