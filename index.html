@@ -26,8 +26,7 @@
   color-scheme:dark;
 }
 html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--jp);margin:0;overflow:hidden}
-#bgc{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+body{background:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:56px 56px;color:var(--fg);font-family:var(--jp);margin:0;overflow:hidden}
 .flash{position:fixed;inset:0;z-index:1;pointer-events:none;background:var(--over);opacity:0}
 body.alarm .flash{animation:fl .5s steps(1) infinite}
 @keyframes fl{0%{opacity:.55}50%{opacity:0}}
@@ -111,7 +110,6 @@ td.r,th.r{text-align:right}
 </head>
 <body>
 
-<canvas id="bgc" aria-hidden="true"></canvas>
 <div class="flash" aria-hidden="true"></div>
 
 <div class="app">
@@ -251,31 +249,6 @@ try{const v=+localStorage.getItem('scalp-limit');if(v>=10&&v<=120&&v%5===0)limit
 let armed=false;
 $('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='もう一度押すとリセット';setTimeout(()=>{armed=false;$('reset').textContent='本日の記録をリセット'},3000);return}
   trades=[];save();render();armed=false;$('reset').textContent='本日の記録をリセット'};
-
-/* background: faint drifting candlestick chart (decoration only, not market data) */
-(()=>{
-  const cv=$('bgc'),x=cv.getContext('2d'),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let W,H,dpr,candles=[],off=0,price=150;const CW=14;
-  function mk(){const o=price,c=o+(Math.random()-.5)*1.6,h=Math.max(o,c)+Math.random()*.7,l=Math.min(o,c)-Math.random()*.7;price=c+(150-c)*.02;return{o,c,h,l}}
-  function size(){dpr=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
-    while(candles.length<Math.ceil(W/CW)+3)candles.push(mk())}
-  function draw(){
-    x.clearRect(0,0,W,H);
-    x.strokeStyle=css('--grid');x.lineWidth=1;
-    for(let gx=0;gx<W;gx+=56){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
-    for(let gy=0;gy<H;gy+=56){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
-    let mn=Infinity,mx=-Infinity;candles.forEach(k=>{mn=Math.min(mn,k.l);mx=Math.max(mx,k.h)});
-    const top=H*.18,bot=H*.62,y=v=>bot-(v-mn)/(mx-mn||1)*(bot-top);
-    x.globalAlpha=.16;
-    candles.forEach((k,i)=>{const cx=i*CW-off+CW/2,up=k.c>=k.o;x.strokeStyle=x.fillStyle=up?css('--buy'):css('--sell');
-      x.beginPath();x.moveTo(cx,y(k.h));x.lineTo(cx,y(k.l));x.stroke();
-      const a=y(Math.max(k.o,k.c)),b=y(Math.min(k.o,k.c));x.fillRect(cx-4,a,8,Math.max(1,b-a))});
-    x.globalAlpha=1;
-  }
-  function loop(){off+=.15;if(off>=CW){off-=CW;candles.shift();candles.push(mk())}draw();requestAnimationFrame(loop)}
-  addEventListener('resize',()=>{size();draw()});size();
-  if(reduce)draw();else loop();
-})();
 
 render();setLimit(limit);
 </script>
