@@ -71,14 +71,13 @@ select.pair{appearance:none;font-family:var(--mono);font-weight:700;font-size:15
 .pos .s{font-weight:700}
 
 /* presets */
-.limit{display:flex;flex-direction:column;gap:6px}
-.limit .lbl{display:flex;justify-content:space-between;font-family:var(--cond);font-size:12px;letter-spacing:.14em;color:var(--muted)}
-.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.seg button{min-height:50px;font-family:var(--mono);font-size:18px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums;transition:background .12s,color .12s,border-color .12s}
-.seg button small{font-size:11px;font-weight:500;margin-left:1px}
-.seg button[aria-pressed="true"]{background:rgba(25,227,163,.14);border-color:var(--hold);color:var(--fg);box-shadow:0 0 14px -4px var(--hold)}
-.seg button:active{transform:scale(.96)}
-.seg button:disabled{cursor:not-allowed;opacity:.4}
+.limit{display:flex;align-items:center;gap:10px}
+.limit label{font-family:var(--cond);font-size:13px;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
+select.lim{flex:1;min-width:0;appearance:none;font-family:var(--mono);font-weight:700;font-size:20px;color:var(--fg);background-color:var(--panel2);
+  border:1px solid var(--hold);border-radius:8px;padding:12px 40px 12px 14px;cursor:pointer;font-variant-numeric:tabular-nums;
+  background-image:linear-gradient(45deg,transparent 50%,var(--hold) 50%),linear-gradient(135deg,var(--hold) 50%,transparent 50%);
+  background-position:calc(100% - 22px) 50%,calc(100% - 15px) 50%;background-size:7px 7px;background-repeat:no-repeat;box-shadow:0 0 14px -6px var(--hold)}
+select.lim:disabled{opacity:.4;cursor:not-allowed}
 .opts{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .opts label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .opts input{accent-color:var(--hold)}
@@ -147,14 +146,8 @@ td.r,th.r{text-align:right}
   </div>
 
   <div class="limit">
-    <div class="lbl"><span>制限時間</span><span id="limLbl">60秒で決済</span></div>
-    <div class="seg" id="presets" role="group" aria-label="制限時間">
-      <button type="button" data-s="20" aria-pressed="false">20<small>s</small></button>
-      <button type="button" data-s="30" aria-pressed="false">30<small>s</small></button>
-      <button type="button" data-s="45" aria-pressed="false">45<small>s</small></button>
-      <button type="button" data-s="60" aria-pressed="true">60<small>s</small></button>
-      <button type="button" data-s="90" aria-pressed="false">90<small>s</small></button>
-    </div>
+    <label for="lim">制限時間</label>
+    <select class="lim" id="lim"><option value="10">10秒で決済</option><option value="15">15秒で決済</option><option value="20">20秒で決済</option><option value="25">25秒で決済</option><option value="30">30秒で決済</option><option value="35">35秒で決済</option><option value="40">40秒で決済</option><option value="45">45秒で決済</option><option value="50">50秒で決済</option><option value="55">55秒で決済</option><option value="60" selected>60秒で決済</option><option value="65">65秒で決済</option><option value="70">70秒で決済</option><option value="75">75秒で決済</option><option value="80">80秒で決済</option><option value="85">85秒で決済</option><option value="90">90秒で決済</option><option value="95">95秒で決済</option><option value="100">100秒で決済</option><option value="105">105秒で決済</option><option value="110">110秒で決済</option><option value="115">115秒で決済</option><option value="120">120秒で決済</option></select>
   </div>
   <div class="opts">
     <label><input type="checkbox" id="snd" checked> 音</label>
@@ -238,7 +231,7 @@ async function enter(s){
   setState('HOLDING','--hold');
   $('pos').innerHTML=`<span class="s" style="color:var(--${s==='BUY'?'buy':'sell'})">${s==='BUY'?'買い':'売り'}</span> ${$('pair').value}`;
   $('orders').innerHTML='<button type="button" class="ob close" id="close"><small>CLOSE POSITION</small>決済した</button>';
-  document.querySelectorAll('#presets button').forEach(b=>b.disabled=true);$('pair').disabled=true;
+  $('lim').disabled=true;$('pair').disabled=true;
   beep(1200,.06);buzz(60);tick();
 }
 function exit(){
@@ -248,15 +241,13 @@ function exit(){
   trades.push({at:pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds()),side,pair:$('pair').value,held,late:held>limit});
   save();render();
   $('orders').innerHTML='<button type="button" class="ob sell" data-side="SELL"><small>SELL</small>売り</button><button type="button" class="ob buy" data-side="BUY"><small>BUY</small>買い</button>';
-  document.querySelectorAll('#presets button').forEach(b=>b.disabled=false);$('pair').disabled=false;
+  $('lim').disabled=false;$('pair').disabled=false;
   idle();
 }
 $('orders').onclick=e=>{const b=e.target.closest('button');if(!b)return;running?exit():enter(b.dataset.side)};
-function setLimit(v){limit=v;
-  document.querySelectorAll('#presets button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.s===v));
-  $('limLbl').textContent=v+'秒で決済';try{localStorage.setItem('scalp-limit',v)}catch(e){}idle()}
-$('presets').onclick=e=>{const b=e.target.closest('button');if(!b||running)return;setLimit(+b.dataset.s);buzz(20)};
-try{const v=+localStorage.getItem('scalp-limit');if([20,30,45,60,90].includes(v))limit=v}catch(e){}
+function setLimit(v){limit=v;$('lim').value=v;try{localStorage.setItem('scalp-limit',v)}catch(e){}if(!running)idle()}
+$('lim').onchange=e=>setLimit(+e.target.value);
+try{const v=+localStorage.getItem('scalp-limit');if(v>=10&&v<=120&&v%5===0)limit=v}catch(e){}
 let armed=false;
 $('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='もう一度押すとリセット';setTimeout(()=>{armed=false;$('reset').textContent='本日の記録をリセット'},3000);return}
   trades=[];save();render();armed=false;$('reset').textContent='本日の記録をリセット'};
