@@ -83,14 +83,15 @@ select.lim:disabled{opacity:.4;cursor:not-allowed}
 .opts input{accent-color:var(--hold)}
 
 /* order buttons */
-.orders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.orders{display:grid;grid-template-columns:1fr}
 .ob{border:0;border-radius:8px;padding:14px 0 12px;cursor:pointer;color:#fff;display:flex;flex-direction:column;align-items:center;gap:2px;
   font-family:var(--jp);font-weight:900;font-size:24px;letter-spacing:.12em;transition:transform .08s,filter .15s}
 .ob small{font-family:var(--cond);font-weight:600;font-size:12px;letter-spacing:.25em;opacity:.85}
 .ob:active{transform:scale(.97)}
 .ob.buy{background:linear-gradient(180deg,#ff5d70,#d92c45);box-shadow:0 6px 24px -8px var(--buy)}
 .ob.sell{background:linear-gradient(180deg,#5a9cff,#2266d6);box-shadow:0 6px 24px -8px var(--sell)}
-.ob.close{grid-column:1/-1;background:var(--fg);color:var(--bg);box-shadow:0 6px 24px -10px var(--fg)}
+.ob.entry{background:linear-gradient(180deg,#2af0b3,#0fb886);color:#03140d;box-shadow:0 6px 24px -8px var(--hold)}
+.ob.close{background:var(--fg);color:var(--bg);box-shadow:0 6px 24px -10px var(--fg)}
 button:focus-visible,select:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
 
 /* blotter */
@@ -156,12 +157,11 @@ td.r,th.r{text-align:right}
   </div>
 
   <div class="orders" id="orders">
-    <button type="button" class="ob sell" data-side="SELL"><small>SELL</small>売り</button>
-    <button type="button" class="ob buy" data-side="BUY"><small>BUY</small>買い</button>
+    <button type="button" class="ob entry"><small>ENTRY</small>エントリー</button>
   </div>
 
   <div class="blotter">
-    <table><thead><tr><th>時刻</th><th>売買</th><th>ペア</th><th class="r">保有</th><th class="r">判定</th></tr></thead>
+    <table><thead><tr><th>時刻</th><th>ペア</th><th class="r">保有</th><th class="r">判定</th></tr></thead>
     <tbody id="hist"></tbody></table>
   </div>
   <div class="foot"><button type="button" id="reset">本日の記録をリセット</button></div>
@@ -196,8 +196,8 @@ function render(){
   $('stN').textContent=n;
   $('stA').textContent=n?(trades.reduce((a,t)=>a+t.held,0)/n).toFixed(1)+'s':'--';
   $('stO').textContent=o;$('stO').classList.toggle('bad',o>0);
-  $('hist').innerHTML=n?trades.slice().reverse().map(t=>`<tr><td>${t.at}</td><td style="color:var(--${t.side==='BUY'?'buy':'sell'})">${t.side==='BUY'?'買':'売'}</td><td>${t.pair}</td><td class="r">${t.held.toFixed(1)}s</td><td class="r"><span class="tag ${t.late?'ng':'ok'}">${t.late?'OVER':'OK'}</span></td></tr>`).join('')
-    :`<tr><td colspan="5" class="empty">まだ取引はありません</td></tr>`;
+  $('hist').innerHTML=n?trades.slice().reverse().map(t=>`<tr><td>${t.at}</td><td>${t.pair}</td><td class="r">${t.held.toFixed(1)}s</td><td class="r"><span class="tag ${t.late?'ng':'ok'}">${t.late?'OVER':'OK'}</span></td></tr>`).join('')
+    :`<tr><td colspan="4" class="empty">まだ取引はありません</td></tr>`;
 }
 function idle(){
   $('time').textContent=fmt(limit);prog.style.strokeDashoffset=0;prog.style.stroke=css('--line');
@@ -223,13 +223,13 @@ function tick(){
   }
   raf=requestAnimationFrame(tick);
 }
-async function enter(s){
+async function enter(){
   if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(ac&&ac.state==='suspended')ac.resume();
   try{wake=await navigator.wakeLock?.request('screen')}catch(e){}
-  side=s;running=true;alarmed=warned=false;start=performance.now();
+  running=true;alarmed=warned=false;start=performance.now();
   setState('HOLDING','--hold');
-  $('pos').innerHTML=`<span class="s" style="color:var(--${s==='BUY'?'buy':'sell'})">${s==='BUY'?'買い':'売り'}</span> ${$('pair').value}`;
+  $('pos').textContent='保有中 '+$('pair').value;
   $('orders').innerHTML='<button type="button" class="ob close" id="close"><small>CLOSE POSITION</small>決済した</button>';
   $('lim').disabled=true;$('pair').disabled=true;
   beep(1200,.06);buzz(60);tick();
@@ -238,13 +238,13 @@ function exit(){
   const held=(performance.now()-start)/1000,d=new Date(Date.now()+9*3600e3);
   cancelAnimationFrame(raf);clearInterval(beepT);running=false;document.body.classList.remove('alarm');
   try{wake?.release()}catch(e){};wake=null;
-  trades.push({at:pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds()),side,pair:$('pair').value,held,late:held>limit});
+  trades.push({at:pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds()),pair:$('pair').value,held,late:held>limit});
   save();render();
-  $('orders').innerHTML='<button type="button" class="ob sell" data-side="SELL"><small>SELL</small>売り</button><button type="button" class="ob buy" data-side="BUY"><small>BUY</small>買い</button>';
+  $('orders').innerHTML='<button type="button" class="ob entry"><small>ENTRY</small>エントリー</button>';
   $('lim').disabled=false;$('pair').disabled=false;
   idle();
 }
-$('orders').onclick=e=>{const b=e.target.closest('button');if(!b)return;running?exit():enter(b.dataset.side)};
+$('orders').onclick=e=>{const b=e.target.closest('button');if(!b)return;running?exit():enter()};
 function setLimit(v){limit=v;$('lim').value=v;try{localStorage.setItem('scalp-limit',v)}catch(e){}if(!running)idle()}
 $('lim').onchange=e=>setLimit(+e.target.value);
 try{const v=+localStorage.getItem('scalp-limit');if(v>=10&&v<=120&&v%5===0)limit=v}catch(e){}
