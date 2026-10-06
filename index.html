@@ -228,7 +228,7 @@ async function enter(){
   running=true;alarmed=warned=false;start=performance.now();
   setState('HOLDING','--hold');
   $('pos').textContent='保有中 '+$('pair').value;
-  $('orders').innerHTML='<button type="button" class="ob close" id="close"><small>CLOSE POSITION</small>決済した</button>';
+  $('orders').innerHTML='<button type="button" class="ob close" id="close"><small>CLOSE</small>決済</button>';
   $('lim').disabled=true;$('pair').disabled=true;
   beep(1200,.06);buzz(60);tick();
 }
